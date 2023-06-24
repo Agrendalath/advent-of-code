@@ -7,6 +7,7 @@ mod day4;
 mod day5;
 mod day6;
 mod day7;
+mod day8;
 
 fn main() {
     println!("Day 1");
@@ -29,6 +30,9 @@ fn main() {
 
     println!("\nDay 7");
     day7::main();
+
+    println!("\nDay 8");
+    day8::main();
 }
 
 pub fn get_input(day: u8, test: bool) -> String {
