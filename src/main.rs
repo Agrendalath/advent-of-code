@@ -2,6 +2,7 @@ use std::fs;
 
 mod day1;
 mod day10;
+mod day11;
 mod day2;
 mod day3;
 mod day4;
@@ -41,6 +42,9 @@ fn main() {
 
     println!("\nDay 10");
     day10::main();
+
+    println!("\nDay 11");
+    day11::main();
 }
 
 pub fn get_input(day: u8, test: bool) -> String {
