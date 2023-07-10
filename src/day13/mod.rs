@@ -3,6 +3,7 @@
 use crate::get_input;
 use regex::Regex;
 use std::cmp::{min, Ordering};
+use std::collections::HashMap;
 use std::str::FromStr;
 
 const DAY: u8 = 13;
@@ -14,42 +15,39 @@ pub fn main() {
     println!("{}", part2(&get_input(DAY, false)));
 }
 
-fn verify_packet_order(
-    first_packet: &str,
-    second_packet: &str,
+fn parse_packet(
+    packet: &str,
     re1: &Regex,
     re2: &Regex,
     re3: &Regex,
     re_empty_arrays: &Regex,
     re_numbers: &Regex,
-) -> bool {
+) -> Vec<String> {
     // Ugly hack - two-digit numbers do not work with the float conversion approach.
     // Replaces only `10` because it is the only multi-digit number in the test input.
-    let first_packet = first_packet.replace("10", "91");
-    let second_packet = second_packet.replace("10", "91");
+    let packet = packet.replace("10", "91");
 
-    let first_packet = first_packet.replace(',', "");
-    let second_packet = second_packet.replace(',', "");
+    let packet = packet.replace(',', "");
 
-    let first_packet = re1.replace_all(&first_packet, "][$1][");
-    let first_packet = re2.replace_all(&first_packet, "[[$1][");
-    let first_packet = re3.replace_all(&first_packet, "][$1]]");
-    let first_packet = re_empty_arrays.replace_all(&first_packet, "[0]");
+    let packet = re1.replace_all(&packet, "][$1][");
+    let packet = re2.replace_all(&packet, "[[$1][");
+    let packet = re3.replace_all(&packet, "][$1]]");
+    let packet = re_empty_arrays.replace_all(&packet, "[0]");
 
-    let second_packet = re1.replace_all(&second_packet, "]$1[");
-    let second_packet = re2.replace_all(&second_packet, "[$1[");
-    let second_packet = re3.replace_all(&second_packet, "]$1]");
-    let second_packet = re_empty_arrays.replace_all(&second_packet, "[0]");
-
-    let first_matches: Vec<&str> = re_numbers
-        .find_iter(&first_packet)
-        .map(|m| m.as_str())
-        .collect();
-    let second_matches: Vec<&str> = re_numbers
-        .find_iter(&second_packet)
-        .map(|m| m.as_str())
+    let matches: Vec<String> = re_numbers
+        .find_iter(&packet)
+        .map(|m| String::from(m.as_str()))
         .collect();
 
+    matches
+}
+
+fn verify_packet_order(
+    first_packet: &str,
+    first_matches: &Vec<String>,
+    second_packet: &str,
+    second_matches: &Vec<String>,
+) -> bool {
     for i in 0..min(first_matches.len(), second_matches.len()) {
         let mut first_number = first_matches[i].to_string();
         first_number.insert(1, '.');
@@ -81,22 +79,11 @@ fn verify_packet_order(
 
 fn packet_order(
     first_packet: &str,
+    first_matches: &Vec<String>,
     second_packet: &str,
-    re1: &Regex,
-    re2: &Regex,
-    re3: &Regex,
-    re_empty_arrays: &Regex,
-    re_numbers: &Regex,
+    second_matches: &Vec<String>,
 ) -> Ordering {
-    if verify_packet_order(
-        first_packet,
-        second_packet,
-        re1,
-        re2,
-        re3,
-        re_empty_arrays,
-        re_numbers,
-    ) {
+    if verify_packet_order(first_packet, first_matches, second_packet, second_matches) {
         return Ordering::Less;
     }
 
@@ -115,15 +102,11 @@ fn part1(input: &str) -> u32 {
     let mut buffer: Vec<&str> = vec![];
     for (i, line) in input.lines().enumerate() {
         if line.is_empty() {
-            if verify_packet_order(
-                buffer[0],
-                buffer[1],
-                &re1,
-                &re2,
-                &re3,
-                &re_empty_arrays,
-                &re_numbers,
-            ) {
+            let first_matches =
+                parse_packet(buffer[0], &re1, &re2, &re3, &re_empty_arrays, &re_numbers);
+            let second_matches =
+                parse_packet(buffer[1], &re1, &re2, &re3, &re_empty_arrays, &re_numbers);
+            if verify_packet_order(buffer[0], &first_matches, buffer[1], &second_matches) {
                 result += (i as u32 + 1) / 3;
             }
             buffer.clear();
@@ -142,17 +125,50 @@ fn part2(input: &str) -> u32 {
     let re_empty_arrays = Regex::new(r"\[]").unwrap();
     let re_numbers = Regex::new(r"-?\d+").unwrap();
 
-    let mut packets: Vec<&str> = vec!["[[2]]", "[[6]]"];
+    let first_divider_packet = "[[2]]";
+    let second_divider_packet = "[[6]]";
+    let mut packets: Vec<&str> = vec![first_divider_packet, second_divider_packet];
+    let mut packet_matches: HashMap<&str, Vec<String>> = HashMap::new();
+
+    let matches = parse_packet(
+        first_divider_packet,
+        &re1,
+        &re2,
+        &re3,
+        &re_empty_arrays,
+        &re_numbers,
+    );
+    packet_matches.insert(first_divider_packet, matches);
+    let matches = parse_packet(
+        second_divider_packet,
+        &re1,
+        &re2,
+        &re3,
+        &re_empty_arrays,
+        &re_numbers,
+    );
+    packet_matches.insert(second_divider_packet, matches);
+
     for line in input.lines() {
         if !line.is_empty() {
             packets.push(line);
+            let matches = parse_packet(line, &re1, &re2, &re3, &re_empty_arrays, &re_numbers);
+            packet_matches.insert(line, matches);
         }
     }
 
-    packets.sort_by(|a, b| packet_order(a, b, &re1, &re2, &re3, &re_empty_arrays, &re_numbers));
+    packets.sort_by(|a, b| packet_order(a, &packet_matches[a], b, &packet_matches[b]));
 
-    let first_divider_packet = packets.iter().position(|&p| p == "[[2]]").unwrap() as u32 + 1;
-    let second_divider_packet = packets.iter().position(|&p| p == "[[6]]").unwrap() as u32 + 1;
+    let first_divider_packet = packets
+        .iter()
+        .position(|&p| p == first_divider_packet)
+        .unwrap() as u32
+        + 1;
+    let second_divider_packet = packets
+        .iter()
+        .position(|&p| p == second_divider_packet)
+        .unwrap() as u32
+        + 1;
 
     first_divider_packet * second_divider_packet
 }
