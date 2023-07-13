@@ -51,7 +51,7 @@ fn part2(input: &str) -> i32 {
 }
 
 #[test]
-fn test() {
+fn test1() {
     for input in TEST_INPUTS {
         let result = part1(input.0);
         assert_eq!(result, input.1);
@@ -59,7 +59,10 @@ fn test() {
 
     let result = part1(&get_input(DAY, false));
     assert_eq!(result, 1582);
+}
 
+#[test]
+fn test2() {
     for input in TEST_INPUTS {
         let result = part2(input.0);
         assert_eq!(result, input.2);

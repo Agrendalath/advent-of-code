@@ -80,13 +80,16 @@ fn part2(input: &str) -> usize {
 }
 
 #[test]
-fn test() {
+fn test1() {
     let result = part1(&get_input(DAY, true));
     assert_eq!(result, 13);
 
     let result = part1(&get_input(DAY, false));
     assert_eq!(result, 6367);
+}
 
+#[test]
+fn test2() {
     let result = part2(&get_input(DAY, true));
     assert_eq!(result, 1);
 

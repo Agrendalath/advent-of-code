@@ -86,13 +86,16 @@ fn part2(input: &str, print_result: bool) -> [[bool; 40]; 6] {
 }
 
 #[test]
-fn test() {
+fn test1() {
     let result = part1(&get_input(DAY, true));
     assert_eq!(result, 13140);
 
     let result = part1(&get_input(DAY, false));
     assert_eq!(result, 13820);
+}
 
+#[test]
+fn test2() {
     let test_result_2 = "##..##..##..##..##..##..##..##..##..##..
 ###...###...###...###...###...###...###.
 ####....####....####....####....####....

@@ -174,7 +174,7 @@ fn part2(input: &str) -> u32 {
 }
 
 #[test]
-fn test() {
+fn test1() {
     let result = part1(&get_input(DAY, true));
     assert_eq!(result, 13);
 
@@ -201,7 +201,10 @@ fn test() {
 
     let result = part1(&get_input(DAY, false));
     assert_eq!(result, 5252);
+}
 
+#[test]
+fn test2() {
     let result = part2(&get_input(DAY, true));
     assert_eq!(result, 140);
 

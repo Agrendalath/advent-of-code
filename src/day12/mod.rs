@@ -125,13 +125,16 @@ fn part2(input: &str) -> i32 {
 }
 
 #[test]
-fn test() {
+fn test1() {
     let result = part1(&get_input(DAY, true));
     assert_eq!(result, 31);
 
     let result = part1(&get_input(DAY, false));
     assert_eq!(result, 370);
+}
 
+#[test]
+fn test2() {
     let result = part2(&get_input(DAY, true));
     assert_eq!(result, 29);
 
