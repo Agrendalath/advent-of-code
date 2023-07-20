@@ -167,10 +167,8 @@ fn test1() {
 #[test]
 fn test2() {
     let result = part2(&get_input(DAY, true));
-    dbg!(result);
     assert_eq!(result, 93);
 
     let result = part2(&get_input(DAY, false));
-    dbg!(result);
     assert_eq!(result, 26686);
 }

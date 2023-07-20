@@ -43,46 +43,6 @@ fn chord_range(radius: u32, sensor: &Point, tested_line: i32) -> Option<RangeInc
     Some(start..=end)
 }
 
-fn merge_ranges(ranges: &mut Vec<RangeInclusive<i32>>) -> Vec<RangeInclusive<i32>> {
-    ranges.sort_unstable_by_key(|range| *range.start());
-    let mut merged_ranges: Vec<RangeInclusive<i32>> = vec![ranges[0].clone()];
-
-    'range: for range in ranges {
-        for i in 0..merged_ranges.len() {
-            if *range.start() <= merged_ranges[i].end() + 1
-                && range.end() + 1 >= *merged_ranges[i].start()
-            {
-                let start = *range.start().min(merged_ranges[i].start());
-                let end = *range.end().max(merged_ranges[i].end());
-                merged_ranges[i] = start..=end;
-                continue 'range;
-            }
-        }
-
-        merged_ranges.push(range.clone());
-    }
-
-    merged_ranges
-}
-
-fn check_range(range: &RangeInclusive<i32>, tested_line: i32, max: i32) -> Option<Point> {
-    if *range.start() > 0 {
-        return Some(Point {
-            x: range.start() - 1,
-            y: tested_line,
-        });
-    }
-
-    if *range.end() < max {
-        return Some(Point {
-            x: range.end() + 1,
-            y: tested_line,
-        });
-    }
-
-    None
-}
-
 fn part1(input: &str, tested_line: i32) -> u32 {
     let re = Regex::new(r"(-?\d+).*?(-?\d+).*?(-?\d+).*?(-?\d+)").unwrap();
     let mut result = 0;
@@ -144,12 +104,20 @@ fn part1(input: &str, tested_line: i32) -> u32 {
     result as u32
 }
 
+fn check_point(point: &Point, sensors_and_beacons: &Vec<(Point, u32)>) -> bool {
+    // Check if the point is outside of the range of all sensors.
+    for (sensor, distance) in sensors_and_beacons {
+        if *distance >= sensor.distance(point) {
+            return false;
+        }
+    }
+    true
+}
+
 fn part2(input: &str, max: i32) -> u64 {
     let re = Regex::new(r"(-?\d+).*?(-?\d+).*?(-?\d+).*?(-?\d+)").unwrap();
-    let mut sensors_and_beacons: Vec<(Point, Point, u32)> = vec![];
-    let mut empty_point = Point { x: 0, y: 0 };
-    let mut min_x = i32::MAX;
-    let mut max_x = i32::MIN;
+    let mut sensors_with_distance: Vec<(Point, u32)> = vec![];
+    let mut empty_point = Point { x: -1, y: -1 };
 
     for line in input.lines() {
         let captures = re.captures_iter(line).last().unwrap();
@@ -162,51 +130,52 @@ fn part2(input: &str, max: i32) -> u64 {
         let beacon = Point { x: x2, y: y2 };
         let radius = sensor.distance(&beacon);
 
-        // A small optimization.
-        min_x = min_x.min(sensor.x).max(0);
-        max_x = max_x.max(sensor.x).min(MAX);
-
-        sensors_and_beacons.push((sensor, beacon, radius));
+        sensors_with_distance.push((sensor, radius));
     }
 
-    'lines: for tested_line in (min_x..max_x).rev() {
-        let mut found_beacons: HashSet<Point> = HashSet::new();
-        let mut ranges: Vec<RangeInclusive<i32>> = vec![];
-
-        for sensor_and_beacon in &sensors_and_beacons {
-            let sensor = &sensor_and_beacon.0;
-            let beacon = &sensor_and_beacon.1;
-            let radius = sensor_and_beacon.2;
-
-            if sensor.y == tested_line && !found_beacons.contains(sensor) {
-                found_beacons.insert(sensor.clone());
-                ranges.push(sensor.x..=sensor.x);
-            }
-            if beacon.y == tested_line && sensor != beacon && !found_beacons.contains(beacon) {
-                found_beacons.insert(beacon.clone());
-                ranges.push(beacon.x..=beacon.x);
+    'main: for (sensor1, distance) in &sensors_with_distance {
+        for (sensor2, distance2) in &sensors_with_distance {
+            if sensor1 == sensor2 {
+                continue;
             }
 
-            let chord_range = chord_range(radius, sensor, tested_line);
-            if let Some(value) = chord_range {
-                ranges.push(value);
-            }
-        }
+            // Generate 8 permutations of corners.
+            for diff1 in [-1, 1] {
+                for diff2 in [-1, 1] {
+                    for diff_common in [-1, 1] {
+                        let corner1 =
+                            sensor1.x + sensor1.y * diff_common + (*distance as i32 + 1) * diff1;
 
-        ranges = merge_ranges(&mut ranges);
+                        let corner2 =
+                            sensor2.x - sensor2.y * diff_common + (*distance2 as i32 + 1) * diff2;
 
-        if ranges.len() > 1 {
-            for range in ranges {
-                let check = check_range(&range, tested_line, max);
-                if check.is_some() {
-                    empty_point = check.unwrap();
-                    break 'lines;
+                        let mut intersection_point = Point {
+                            x: (corner1 + corner2) / 2,
+                            y: corner1,
+                        };
+                        intersection_point.y -= intersection_point.x;
+
+                        if intersection_point.x < 0
+                            || intersection_point.y < 0
+                            || intersection_point.x > max
+                            || intersection_point.y > max
+                        {
+                            continue;
+                        }
+
+                        if check_point(&intersection_point, &sensors_with_distance) {
+                            empty_point = intersection_point;
+                            break 'main;
+                        }
+                    }
                 }
             }
         }
     }
 
-    dbg!(&empty_point);
+    if empty_point.x < 0 {
+        panic!("You should implement _corner_ cases.")
+    }
     empty_point.x as u64 * MAX as u64 + empty_point.y as u64
 }
 
@@ -222,10 +191,8 @@ fn test1() {
 #[test]
 fn test2() {
     let result = part2(&get_input(DAY, true), 20);
-    dbg!(result);
     assert_eq!(result, 56000011);
 
     let result = part2(&get_input(DAY, false), MAX);
-    dbg!(result);
     assert_eq!(result, 12630143363767);
 }
